@@ -1,0 +1,70 @@
+name: Build Johnny Castaway for Windows
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Ensure GCC is available for CGO
+        shell: powershell
+        run: |
+          if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
+            choco install mingw -y --no-progress
+          }
+          gcc --version
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Build Windows executable and screensaver
+        shell: powershell
+        run: |
+          $buildTime = (Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss UTC')
+          go build -trimpath -ldflags "-H windowsgui -X 'main.buildTime=$buildTime'" -o JohnnyCastaway.exe .
+          Copy-Item JohnnyCastaway.exe JohnnyCastaway.scr
+
+      - name: Generate SHA-256 checksums
+        shell: powershell
+        run: |
+          $exe = (Get-FileHash .\JohnnyCastaway.exe -Algorithm SHA256).Hash.ToLower()
+          $scr = (Get-FileHash .\JohnnyCastaway.scr -Algorithm SHA256).Hash.ToLower()
+
+          "SHA256 (JohnnyCastaway.exe) = $exe" |
+            Out-File SHA256.txt -Encoding ascii
+
+          "SHA256 (JohnnyCastaway.scr) = $scr" |
+            Out-File SHA256.txt -Encoding ascii -Append
+
+          Get-Content SHA256.txt
+
+      - name: Upload compiled files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Johnny-Castaway-Windows
+          path: |
+            JohnnyCastaway.exe
+            JohnnyCastaway.scr
+            SHA256.txt
+          if-no-files-found: error
+          retention-days: 30
