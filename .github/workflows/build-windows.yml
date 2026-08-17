@@ -37,6 +37,9 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
 
+      - name: Extract original Johnny Castaway assets
+        run: python extract_johncast_assets.py
+
       - name: Build Windows executable and screensaver
         shell: powershell
         run: |
