@@ -45,6 +45,14 @@ var monitorRects []TMonitorRect
 // full-window rectangle), so this is always safe to call instead of the
 // old single-monitor sizing code, not just an opt-in extra mode.
 func setupMonitors() {
+	// In screensaver mode, use only the primary monitor by default.
+	// If "Independent instances" is enabled, runStory() will instead
+	// launch one separate instance for each connected monitor.
+	if isScreensaverMode && !activeConfig.MultiInstance && !hasMonitorIndex {
+		hasMonitorIndex = true
+		runOnMonitorIndex = 0
+	}
+
 	if hasMonitorIndex {
 		pos := rl.GetMonitorPosition(runOnMonitorIndex)
 		w := float32(rl.GetMonitorWidth(runOnMonitorIndex))
